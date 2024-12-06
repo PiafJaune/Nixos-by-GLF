@@ -366,12 +366,6 @@ def run():
     cfg += cfgnetwork
     cfg += cfgnetworkmanager
 
-    # Hostname
-    if gs.value("hostname") is None:
-        catenate(variables, "hostname", "GLF-OS")
-    else:
-        catenate(variables, "hostname", gs.value("hostname"))
-
     # Internationalisation properties
     if gs.value("locationRegion") is not None and gs.value("locationZone") is not None:
         cfg += cfgtime
@@ -394,10 +388,6 @@ def run():
             cfg += cfglocaleextra
             for conf in localeconf:
                 catenate(variables, conf, localeconf.get(conf).split("/")[0])
-
-    # Choose desktop environment
-    if gs.value("packagechooser_packagechooser") == "gnome":
-        cfg += cfggnome
 
     # Keyboard layout settings
     if (
@@ -467,6 +457,10 @@ def run():
                             gs.value("keyboardVConsoleKeymap")
                         )
                     )
+    
+    # Choose desktop environment
+    if gs.value("packagechooser_packagechooser") == "gnome":
+        cfg += cfggnome
 
     # Setup user
     if gs.value("username") is not None:

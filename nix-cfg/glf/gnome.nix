@@ -81,20 +81,27 @@
             icon-theme = "Tela-circle";
           };
 
-          "org/gnome/desktop/peripherals/touchpad" = {
-            click-method = "areas";
+          "org/gnome/desktop/background" = {
+            color-shading-type = "solid";
+            picture-options = "zoom";
+            picture-uri = "file:///etc/nixos/glf/GLF-wallpaper.png";
+            picture-uri-dark = "file:///etc/nixos/glf/GLF-wallpaper.png";
+          };
+
+          " org/gnome/desktop/peripherals/touchpad " = {
+            click-method = "areas ";
             tap-to-click = true;
             two-finger-scrolling-enabled = true;
           };
 
-          "org/gnome/desktop/peripherals/keyboard" = {
+          " org/gnome/desktop/peripherals/keyboard " = {
             numlock-state = true;
           };
 
-          "org/gnome/shell" = {
+          " org/gnome/shell " = {
             disable-user-extensions = false;
             enabled-extensions = [
-              "caffeine@patapon.info"
+              " caffeine@patapon.info"
               "gsconnect@andyholmes.github.io"
               "appindicatorsupport@rgcjonas.gmail.com"
               "dash-to-dock@micxgx.gmail.com"
@@ -133,3 +140,4 @@
     ];
   };
 }
+
