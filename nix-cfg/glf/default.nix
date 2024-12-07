@@ -11,8 +11,8 @@
     ./pipewire.nix
 
     ./system.nix
+    ./glf-os.nix
+    ./gxn.nix
 
-
-    # ./nvidia.nix
   ];
 }

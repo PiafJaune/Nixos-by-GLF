@@ -151,6 +151,19 @@ cfgautologintty = """  # Enable automatic login for the user.
 
 """
 
+cfg_nvidia = """  
+services.xserver.videoDrivers = [ "nvidia" ];
+
+nixpkgs.config.nvidia.acceptLicense = true;
+
+hardware.nvidia = {
+    open = false;
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
+    nvidiaSettings = true;
+    modesetting.enable = true;
+};
+"""
+
 cfgtail = """  
   system.stateVersion = "@@nixosversion@@"; # DO NOT TOUCH 
 }
@@ -160,33 +173,46 @@ cfgtail = """
 # Required functions
 # =================================================
 
+
 def env_is_set(name):
     envValue = os.environ.get(name)
     return not (envValue is None or envValue == "")
 
+
 def generateProxyStrings():
     proxyEnv = []
-    if env_is_set('http_proxy'):
-        proxyEnv.append('http_proxy={}'.format(os.environ.get('http_proxy')))
-    if env_is_set('https_proxy'):
-        proxyEnv.append('https_proxy={}'.format(os.environ.get('https_proxy')))
-    if env_is_set('HTTP_PROXY'):
-        proxyEnv.append('HTTP_PROXY={}'.format(os.environ.get('HTTP_PROXY')))
-    if env_is_set('HTTPS_PROXY'):
-        proxyEnv.append('HTTPS_PROXY={}'.format(os.environ.get('HTTPS_PROXY')))
+    if env_is_set("http_proxy"):
+        proxyEnv.append("http_proxy={}".format(os.environ.get("http_proxy")))
+    if env_is_set("https_proxy"):
+        proxyEnv.append("https_proxy={}".format(os.environ.get("https_proxy")))
+    if env_is_set("HTTP_PROXY"):
+        proxyEnv.append("HTTP_PROXY={}".format(os.environ.get("HTTP_PROXY")))
+    if env_is_set("HTTPS_PROXY"):
+        proxyEnv.append("HTTPS_PROXY={}".format(os.environ.get("HTTPS_PROXY")))
 
     if len(proxyEnv) > 0:
         proxyEnv.insert(0, "env")
 
     return proxyEnv
 
+
 def pretty_name():
     return _("Installing GLF-OS.")
 
+
 status = pretty_name()
+
 
 def pretty_status_message():
     return status
+
+
+def get_pci_devices():
+    result = subprocess.run(
+        "lspci | grep -E 'VGA|3D'", stdout=subprocess.PIPE, text=True, shell=True
+    )
+    return result.stdout
+
 
 def catenate(d, key, *values):
     """
@@ -200,9 +226,11 @@ def catenate(d, key, *values):
 
     d[key] = "".join(values)
 
+
 # ==================================================================================================
 #                                       GLF-OS Install function
 # ==================================================================================================
+
 
 def run():
     """NixOS Configuration."""
@@ -226,9 +254,9 @@ def run():
         else gs.value("bootLoader")["installPath"]
     )
 
-# ================================================================================
-# Bootloader
-# ================================================================================
+    # ================================================================================
+    # Bootloader
+    # ================================================================================
 
     # Check bootloader
     if fw_type == "efi":
@@ -239,9 +267,9 @@ def run():
     else:
         cfg += cfgbootnone
 
-# ================================================================================
-# Setup encrypted swap devices. nixos-generate-config doesn't seem to notice them.
-# ================================================================================
+    # ================================================================================
+    # Setup encrypted swap devices. nixos-generate-config doesn't seem to notice them.
+    # ================================================================================
 
     for part in gs.value("partitions"):
         if (
@@ -250,7 +278,9 @@ def run():
             and part["device"] is not None
             and part["fs"] == "linuxswap"
         ):
-            cfg += """  boot.initrd.luks.devices."{}".device = "/dev/disk/by-uuid/{}";\n""".format(part["luksMapperName"], part["uuid"])
+            cfg += """  boot.initrd.luks.devices."{}".device = "/dev/disk/by-uuid/{}";\n""".format(
+                part["luksMapperName"], part["uuid"]
+            )
 
     # Check partitions
     root_is_encrypted = False
@@ -355,18 +385,22 @@ def run():
                         ),
                     )
 
-# ================================================================================
-# Writing cfg modules to configuration.nix
-# ================================================================================
+    # ================================================================================
+    # Writing cfg modules to configuration.nix
+    # ================================================================================
 
     status = _("Configuring NixOS")
     libcalamares.job.setprogress(0.18)
-   
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Network
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     cfg += cfgnetwork
     cfg += cfgnetworkmanager
 
-    # Internationalisation properties
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Time + Region
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if gs.value("locationRegion") is not None and gs.value("locationZone") is not None:
         cfg += cfgtime
         catenate(
@@ -389,7 +423,9 @@ def run():
             for conf in localeconf:
                 catenate(variables, conf, localeconf.get(conf).split("/")[0])
 
-    # Keyboard layout settings
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Keyboard Layout
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if (
         gs.value("keyboardLayout") is not None
         and gs.value("keyboardVariant") is not None
@@ -416,7 +452,9 @@ def run():
                     )
                 )
         else:
-            kbdmodelmap = open("/run/current-system/sw/share/systemd/kbd-model-map", "r")
+            kbdmodelmap = open(
+                "/run/current-system/sw/share/systemd/kbd-model-map", "r"
+            )
             kbd = kbdmodelmap.readlines()
             out = []
             for line in kbd:
@@ -457,12 +495,16 @@ def run():
                             gs.value("keyboardVConsoleKeymap")
                         )
                     )
-    
-    # Choose desktop environment
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Choose DE
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if gs.value("packagechooser_packagechooser") == "gnome":
         cfg += cfggnome
 
-    # Setup user
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Setup User
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if gs.value("username") is not None:
         fullname = gs.value("fullname")
         groups = ["networkmanager", "wheel"]
@@ -482,7 +524,15 @@ def run():
         elif gs.value("autoLoginUser") is not None:
             cfg += cfgautologintty
 
-    # Set System version
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Setup Nvidia
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    if "NVIDIA" in get_pci_devices():
+        cfg += cfg_nvidia
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # System Version
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     cfg += cfgtail
     version = ".".join(subprocess.getoutput(["nixos-version"]).split(".")[:2])[:5]
     catenate(variables, "nixosversion", version)
@@ -520,17 +570,19 @@ def run():
         if e.output is not None:
             libcalamares.utils.error(e.output.decode("utf8"))
         return (_("nixos-generate-config failed"), _(e.output.decode("utf8")))
- 
-    # Write the configuration.nix file
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Write configration.nix
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     libcalamares.utils.host_env_process_output(["cp", "/dev/stdin", config], None, cfg)
 
     # ========================================================================================
     # GLF IMPORT
     # ========================================================================================
 
-    dynamic_config = "/tmp/nix-cfg/configuration.nix" # Generated by calamares
-    iso_config = "/iso/nix-cfg/configuration.nix"     # From GLF (used for condition)
-    glf_module = "/iso/nix-cfg/glf"                   # GLF Module
+    dynamic_config = "/tmp/nix-cfg/configuration.nix"  # Generated by calamares
+    iso_config = "/iso/nix-cfg/configuration.nix"  # From GLF (used for condition)
+    glf_module = "/iso/nix-cfg/glf"  # GLF Module
 
     hw_cfg_dest = os.path.join(root_mount_point, "etc/nixos/hardware-configuration.nix")
     hw_modified = False
@@ -538,7 +590,9 @@ def run():
     tmpPath = os.path.join(root_mount_point, "tmp/")
     libcalamares.utils.host_env_process_output(["mkdir", "-p", tmpPath])
     libcalamares.utils.host_env_process_output(["chmod", "0755", tmpPath])
-    libcalamares.utils.host_env_process_output(["sudo", "mount", "--bind", "/tmp", tmpPath])
+    libcalamares.utils.host_env_process_output(
+        ["sudo", "mount", "--bind", "/tmp", tmpPath]
+    )
 
     # ========================================================================================
     # Write and Install
@@ -555,7 +609,9 @@ def run():
                 src_file = os.path.join(src_dir, file)
                 dest_file = os.path.join(dest_dir, file)
                 if os.path.isdir(src_file):
-                    subprocess.run(["sudo", "cp", "-r", src_file, dest_file], check=True)
+                    subprocess.run(
+                        ["sudo", "cp", "-r", src_file, dest_file], check=True
+                    )
                 else:
                     subprocess.run(["sudo", "cp", src_file, dest_file], check=True)
             hw_modified = True
@@ -565,7 +621,7 @@ def run():
             dest_file = os.path.join(root_mount_point, "etc/nixos/")
             subprocess.run(["sudo", "cp", "-r", src_file, dest_file], check=True)
             hw_modified = True
-                
+
         temp_filepath = ""
         if hw_modified:
             # Restore generated hardware-configuration
@@ -585,24 +641,17 @@ def run():
     libcalamares.job.setprogress(0.3)
 
     # build nixos-install command
-    nixosInstallCmd = [ "pkexec" ]
+    nixosInstallCmd = ["pkexec"]
     nixosInstallCmd.extend(generateProxyStrings())
     nixosInstallCmd.extend(
-        [
-            "nixos-install",
-            "--no-root-passwd",
-            "--root",
-            root_mount_point
-        ]
+        ["nixos-install", "--no-root-passwd", "--root", root_mount_point]
     )
 
     # Install customizations
     try:
         output = ""
         proc = subprocess.Popen(
-            nixosInstallCmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
+            nixosInstallCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
         while True:
             line = proc.stdout.readline().decode("utf-8")

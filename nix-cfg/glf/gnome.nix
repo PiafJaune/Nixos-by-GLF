@@ -28,7 +28,6 @@
 
     # gnome
     gnome-tweaks
-    gnome-software
 
     # Extension
     gnomeExtensions.caffeine
@@ -84,24 +83,24 @@
           "org/gnome/desktop/background" = {
             color-shading-type = "solid";
             picture-options = "zoom";
-            picture-uri = "file:///etc/nixos/glf/GLF-wallpaper.png";
-            picture-uri-dark = "file:///etc/nixos/glf/GLF-wallpaper.png";
+            picture-uri = "file:///etc/nixos/glf/white.jpg";
+            picture-uri-dark = "file:///etc/nixos/glf/dark.jpg";
           };
 
-          " org/gnome/desktop/peripherals/touchpad " = {
+          "org/gnome/desktop/peripherals/touchpad" = {
             click-method = "areas ";
             tap-to-click = true;
             two-finger-scrolling-enabled = true;
           };
 
-          " org/gnome/desktop/peripherals/keyboard " = {
+          "org/gnome/desktop/peripherals/keyboard" = {
             numlock-state = true;
           };
 
-          " org/gnome/shell " = {
+          "org/gnome/shell" = {
             disable-user-extensions = false;
             enabled-extensions = [
-              " caffeine@patapon.info"
+              "caffeine@patapon.info"
               "gsconnect@andyholmes.github.io"
               "appindicatorsupport@rgcjonas.gmail.com"
               "dash-to-dock@micxgx.gmail.com"
@@ -114,7 +113,7 @@
               "discord.desktop"
               "thunderbird.desktop"
               "org.gnome.Nautilus.desktop"
-              "org.gnome.Software.desktop"
+              "org.dupot.easyflatpak"
               "org.gnome.Calendar.desktop"
             ];
           };
@@ -127,7 +126,7 @@
             show-mounts-network = true;
             always-center-icons = true;
             custom-theme-shrink = true;
-            dock-fixed = true;
+            dock-fixed = false;
           };
 
           "org/gnome/mutter" = {
