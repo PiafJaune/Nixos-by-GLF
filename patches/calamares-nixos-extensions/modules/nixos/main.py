@@ -37,22 +37,17 @@ cfghead = """
     ];
 
 """
-cfgbootefi = """  # Bootloader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+cfgboot = """  
+  boot.plymouth.enable = true;
+  boot.plymouth.logo = "/etc/nixos/nix-cfg/rice/logo-glf-os.svg";
 
-"""
-
-cfgbootbios = """  # Bootloader.
-  boot.loader.grub.enable = true;
-  boot.loader.grub.device = "@@bootdev@@";
-  boot.loader.grub.useOSProber = true;
-
-"""
-
-cfgbootnone = """  # Disable bootloader.
-  boot.loader.grub.enable = false;
-
+  boot.loader.grub = {
+    enable = true;
+    efiSupport = true;
+    useOSProber = true;
+    device = "@@bootdev@@";
+    splashImage = "/etc/nixos/nix-cfg/rice/boot.png";
+  };
 """
 
 cfgbootgrubcrypt = """  # Setup keyfile
@@ -260,7 +255,7 @@ def run():
 
     # Check bootloader
     if fw_type == "efi":
-        cfg += cfgbootefi
+        cfg += cfgboot
     elif bootdev != "nodev":
         cfg += cfgbootbios
         catenate(variables, "bootdev", bootdev)

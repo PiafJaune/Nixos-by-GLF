@@ -10,7 +10,7 @@ Pour construire l'ISO, suivez les étapes ci-dessous :
 
 2. **Exécutez la commande de construction** :
    ```sh
-   nix build .#iso --impure
+   nix build .#iso 
    ```
 
 

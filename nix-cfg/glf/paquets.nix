@@ -13,7 +13,7 @@
     # APP
     discord
 
-    # libreoffice-bin
+    libreoffice
     # hunspell
     # hunspellDicts.fr-moderne
   ];
