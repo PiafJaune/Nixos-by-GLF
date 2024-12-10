@@ -39,6 +39,8 @@
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # Paquets exclus de l'installation de GNOME
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  documentation.nixos.enable = false;
+
   environment.gnome.excludePackages = with pkgs; [
     tali
     iagno
