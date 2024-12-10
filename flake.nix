@@ -38,6 +38,8 @@
             }
             ({ config, ... }: {
               isoImage = {
+                # volumeID = nixpkgs.lib.mkDefault "GLF-OS_${config.system.nixos.version}";
+
                 includeSystemBuildDependencies = false;
                 storeContents = [ config.system.build.toplevel ];
                 squashfsCompression = "zstd -Xcompression-level 22";

@@ -27,8 +27,7 @@ _ = gettext.translation(
 # Configuration.nix (Modified)
 # ====================================================
 
-cfghead = """
-{ config, pkgs, ... }:
+cfghead = """ { config, pkgs,lib, ... }:
 {
   imports =
     [ # Include the results of the hardware scan + GLF modules
@@ -146,17 +145,11 @@ cfgautologintty = """  # Enable automatic login for the user.
 
 """
 
-cfg_nvidia = """  
-services.xserver.videoDrivers = [ "nvidia" ];
+cfg_nvidia = """ nvidia_config = {
+    enable = true;
+    laptop = @@has_laptop@@;
+@@prime_busids@@  };
 
-nixpkgs.config.nvidia.acceptLicense = true;
-
-hardware.nvidia = {
-    open = false;
-    package = config.boot.kernelPackages.nvidiaPackages.beta;
-    nvidiaSettings = true;
-    modesetting.enable = true;
-};
 """
 
 cfgtail = """  
@@ -167,7 +160,6 @@ cfgtail = """
 # =================================================
 # Required functions
 # =================================================
-
 
 def env_is_set(name):
     envValue = os.environ.get(name)
@@ -208,7 +200,6 @@ def get_pci_devices():
     )
     return result.stdout
 
-
 def catenate(d, key, *values):
     """
     Sets @p d[key] to the string-concatenation of @p values
@@ -221,6 +212,55 @@ def catenate(d, key, *values):
 
     d[key] = "".join(values)
 
+## helpers to detect nvidia boards and pci bus ids of GPUs
+def get_vga_devices():
+    result = subprocess.run(['lspci'], stdout=subprocess.PIPE, text=True)
+    lines = result.stdout.strip().splitlines()
+    vga_devices = []
+    for line in lines:
+        if ' VGA compatible controller: ' in line:
+            address, description = line.split(' VGA compatible controller: ', 1)
+            pci_address = convert_to_pci_format(address)
+            if pci_address != "":
+                vga_devices.append((pci_address, description))
+    return vga_devices
+
+def convert_to_pci_format(address):
+    devid = re.split(r"[:\.]", address)
+    if len(devid) < 3:
+        return ""
+    bus = devid[-3]
+    device = devid[-2]
+    function = devid[-1]
+    return f"PCI:{int(bus, 16)}:{int(device, 16)}:{int(function)}"
+
+def has_nvidia_device(vga_devices):
+    for pci_address, description in vga_devices:
+        if "nvidia" in description.lower():
+            return True
+    return False
+
+def has_nvidia_laptop(vga_devices):
+    for pci_address, description in vga_devices:
+        dev_desc = description.lower()
+        if "nvidia" in dev_desc and ("laptop" in dev_desc or "mobile" in dev_desc):
+            return True
+    return False
+
+def generate_prime_entries(vga_devices):
+    output_lines = ""
+    for pci_address, description in vga_devices:
+        if "intel" in description.lower():
+            var_name = "intelBusId"
+        elif "nvidia" in description.lower():
+            var_name = "nvidiaBusId"
+        elif "amd" in description.lower():
+            var_name = "amdgpuBusId"
+        else:
+            continue 
+        output_lines += f"    # {description}\n"
+        output_lines += f"    {var_name} = \"{pci_address}\";\n"
+    return output_lines
 
 # ==================================================================================================
 #                                       GLF-OS Install function
@@ -253,14 +293,8 @@ def run():
     # Bootloader
     # ================================================================================
 
-    # Check bootloader
-    if fw_type == "efi":
-        cfg += cfgboot
-    elif bootdev != "nodev":
-        cfg += cfgbootbios
-        catenate(variables, "bootdev", bootdev)
-    else:
-        cfg += cfgbootnone
+    cfg += cfgboot
+    catenate(variables, "bootdev", bootdev)
 
     # ================================================================================
     # Setup encrypted swap devices. nixos-generate-config doesn't seem to notice them.
@@ -522,8 +556,13 @@ def run():
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Setup Nvidia
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    if "NVIDIA" in get_pci_devices():
+    vga_devices = get_vga_devices()
+    has_nvidia = has_nvidia_device(vga_devices)
+    if has_nvidia == True:
         cfg += cfg_nvidia
+        has_laptop = has_nvidia_laptop(vga_devices)
+        catenate(variables, "has_laptop", f"{has_laptop}".lower() )
+        catenate(variables, "prime_busids", generate_prime_entries(vga_devices) )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # System Version
