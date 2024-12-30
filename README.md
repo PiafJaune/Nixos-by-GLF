@@ -72,16 +72,16 @@ Un patch de la configuration sera sûrement nécessaire à terme pour terminer s
 
 # ENGLISH
 
-# Construction de l'ISO
+# Building the ISO
 
-Pour construire l'ISO, suivez les étapes ci-dessous :
+To build the ISO, proceed as follows :
 
-1. **Accédez au répertoire** :
+1. **Go to the directory** :
    ```sh
-   cd chemin/vers/Nixos-by-GLF
+   cd path/to/Nixos-by-GLF
    ```
 
-2. **Exécutez la commande de construction** :
+2. **Run the build command** :
    ```sh
    nix build .#iso --impure
    ```
