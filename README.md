@@ -87,13 +87,13 @@ To build the ISO, proceed as follows :
    ```
 
 
-# Alternative (via utilisation de make)
+# Alternative (with make)
 
 > [!NOTE]  
-> Pré-requis: `gnumake` doit être installé  
-> Peut être installé temporairement via la commande `nix-shell -p gnumake`  
+> Prerequisite: `gnumake` must be installed 
+> Can be temporarily installed using `nix-shell -p gnumake`  
 
-1. **Contruction de l'iso** :
+1. **Building the iso** :
 
 La construction de l'iso peut être lancée via la commande:  
    ```
